@@ -29,14 +29,25 @@ export async function checkOffender(offenderId: string): Promise<CheckResult> {
   const startedAt = Date.now();
   const checked_at = new Date().toISOString();
 
-  // Dynamically import Playwright so Next.js can tree-shake it on the client
-  const { chromium } = await import("playwright");
+  // Use @sparticuz/chromium on Vercel (serverless), fall back to system chromium locally
+  const chromiumPkg = await import("@sparticuz/chromium");
+  const { chromium } = await import("playwright-core");
+
+  const isVercel = !!process.env.VERCEL;
+  const executablePath = isVercel
+    ? await chromiumPkg.default.executablePath()
+    : undefined; // playwright-core will find local chromium
+
+  const args = isVercel
+    ? [...chromiumPkg.default.args, "--disable-web-security"]
+    : ["--no-sandbox", "--disable-setuid-sandbox"];
 
   let browser;
   try {
     browser = await chromium.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath,
+      args,
     });
 
     const context = await browser.newContext({
