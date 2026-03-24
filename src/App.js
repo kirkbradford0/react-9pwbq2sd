@@ -8,46 +8,104 @@ const KEYPAD = [
   ['', '0', '⌫'],
 ];
 
-function PhoneKeypad({ onClose, onLogin }) {
-  const [digits, setDigits] = useState('');
-
-  function formatDisplay(d) {
-    if (d.length <= 3) return d;
-    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
-  }
+function LoginScreen({ onLogin }) {
+  const [tab, setTab] = useState('signin'); // 'signin' or 'signup'
+  const [username, setUsername] = useState('');
+  const [pin, setPin] = useState('');
+  const [pinLength, setPinLength] = useState(4);
+  const [error, setError] = useState('');
 
   function handleKey(key) {
     if (key === '⌫') {
-      setDigits(d => d.slice(0, -1));
-    } else if (key === '') {
+      setPin(p => p.slice(0, -1));
+      setError('');
+    } else if (key === '' ) {
       // no-op
-    } else if (digits.length < 10) {
-      setDigits(d => d + key);
+    } else if (pin.length < pinLength) {
+      const newPin = pin + key;
+      setPin(newPin);
+      setError('');
+      if (newPin.length === pinLength) {
+        handleSubmit(newPin);
+      }
     }
   }
 
-  function handleSubmit() {
-    if (digits.length === 10) {
-      onLogin(digits);
+  function handleSubmit(currentPin) {
+    const p = currentPin !== undefined ? currentPin : pin;
+    if (!username.trim()) {
+      setError('Please enter a username.');
+      return;
     }
+    if (p.length !== pinLength) {
+      setError('Please enter your full PIN.');
+      return;
+    }
+    // Accept any username and PIN — no pattern restriction
+    onLogin({ username: username.trim(), pin: p, mode: tab });
+  }
+
+  function handlePinLengthChange(len) {
+    setPinLength(len);
+    setPin('');
+    setError('');
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="keypad-modal" onClick={e => e.stopPropagation()}>
-        <div className="keypad-header">
-          <span className="keypad-title">FM 4 Life</span>
-          <button className="keypad-close" onClick={onClose}>✕</button>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-logo">
+          <span className="logo-icon">🍈</span>
+          <h1>Felon's Melon</h1>
         </div>
 
-        <p className="keypad-prompt">Enter your phone number</p>
+        <div className="auth-tabs">
+          <button
+            className={`auth-tab ${tab === 'signin' ? '' : 'active'}`}
+            onClick={() => { setTab('signin'); setPin(''); setError(''); }}
+          >
+            Sign in
+          </button>
+          <button
+            className={`auth-tab ${tab === 'signup' ? 'active' : ''}`}
+            onClick={() => { setTab('signup'); setPin(''); setError(''); }}
+          >
+            Sign up
+          </button>
+        </div>
 
-        <div className="phone-display">
-          {digits.length === 0
-            ? <span className="phone-placeholder">(___) ___-____</span>
-            : <span className="phone-value">{formatDisplay(digits)}</span>
-          }
+        {tab === 'signup' && (
+          <p className="create-account-label">CREATE ACCOUNT</p>
+        )}
+
+        <input
+          className="username-input"
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={e => { setUsername(e.target.value); setError(''); }}
+        />
+
+        <div className="pin-length-row">
+          <span className="pin-length-label">PIN length:</span>
+          <button
+            className={`pin-length-btn ${pinLength === 4 ? 'selected' : ''}`}
+            onClick={() => handlePinLengthChange(4)}
+          >
+            4
+          </button>
+          <button
+            className={`pin-length-btn ${pinLength === 6 ? 'selected' : ''}`}
+            onClick={() => handlePinLengthChange(6)}
+          >
+            6
+          </button>
+        </div>
+
+        <div className="pin-dots">
+          {Array.from({ length: pinLength }).map((_, i) => (
+            <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
+          ))}
         </div>
 
         <div className="keypad-grid">
@@ -65,54 +123,13 @@ function PhoneKeypad({ onClose, onLogin }) {
           )}
         </div>
 
-        <button
-          className={`btn-enter ${digits.length === 10 ? 'active' : ''}`}
-          onClick={handleSubmit}
-          disabled={digits.length !== 10}
-        >
-          Let's Go
-        </button>
+        {error && <div className="error-banner">{error}</div>}
       </div>
     </div>
   );
 }
 
-function LoginScreen({ onGuestLogin, onPhoneLogin }) {
-  const [showKeypad, setShowKeypad] = useState(false);
-
-  return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-logo">
-          <span className="logo-icon">🍈</span>
-          <h1>Felons Melon</h1>
-          <p className="login-subtitle">Your accountability companion</p>
-        </div>
-
-        <div className="login-options">
-          <button className="btn-fm4life" onClick={() => setShowKeypad(true)}>
-            FM 4 Life
-          </button>
-          <button className="btn-guest" onClick={onGuestLogin}>
-            Guest Mode
-          </button>
-        </div>
-      </div>
-
-      {showKeypad && (
-        <PhoneKeypad
-          onClose={() => setShowKeypad(false)}
-          onLogin={(phone) => {
-            setShowKeypad(false);
-            onPhoneLogin(phone);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function MainApp({ onLogout, userMode }) {
+function MainApp({ onLogout, user }) {
   const [activeTab, setActiveTab] = useState('home');
 
   return (
@@ -120,27 +137,19 @@ function MainApp({ onLogout, userMode }) {
       <header className="app-header">
         <div className="header-left">
           <span className="header-logo">🍈</span>
-          <h2>Felons Melon</h2>
+          <h2>Felon's Melon</h2>
         </div>
         <div className="header-right">
-          <span className="user-badge">
-            {userMode === 'guest' ? 'Guest' : 'FM 4 Life'}
-          </span>
-          <button className="btn-logout" onClick={onLogout}>
-            Sign Out
-          </button>
+          <span className="user-badge">{user.username}</span>
+          <button className="btn-logout" onClick={onLogout}>Sign Out</button>
         </div>
       </header>
 
       <main className="app-main">
         {activeTab === 'home' && (
           <div className="tab-content">
-            <h2>Welcome{userMode === 'guest' ? '' : ' back'}</h2>
-            <p className="welcome-text">
-              {userMode === 'guest'
-                ? "You're browsing as a guest."
-                : "You're logged in."}
-            </p>
+            <h2>Welcome back, {user.username}</h2>
+            <p className="welcome-text">You're logged in to Felon's Melon.</p>
             <div className="card-grid">
               <div className="info-card">
                 <span className="card-icon">📋</span>
@@ -179,22 +188,19 @@ function MainApp({ onLogout, userMode }) {
           className={`nav-item ${activeTab === 'home' ? 'active' : ''}`}
           onClick={() => setActiveTab('home')}
         >
-          <span>🏠</span>
-          <span>Home</span>
+          <span>🏠</span><span>Home</span>
         </button>
         <button
           className={`nav-item ${activeTab === 'activities' ? 'active' : ''}`}
           onClick={() => setActiveTab('activities')}
         >
-          <span>📋</span>
-          <span>Activities</span>
+          <span>📋</span><span>Activities</span>
         </button>
         <button
           className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
           onClick={() => setActiveTab('reports')}
         >
-          <span>📊</span>
-          <span>Reports</span>
+          <span>📊</span><span>Reports</span>
         </button>
       </nav>
     </div>
@@ -205,18 +211,8 @@ export default function App() {
   const [session, setSession] = useState(null);
 
   if (session) {
-    return (
-      <MainApp
-        userMode={session.mode}
-        onLogout={() => setSession(null)}
-      />
-    );
+    return <MainApp user={session} onLogout={() => setSession(null)} />;
   }
 
-  return (
-    <LoginScreen
-      onGuestLogin={() => setSession({ mode: 'guest' })}
-      onPhoneLogin={(phone) => setSession({ mode: 'phone', phone })}
-    />
-  );
+  return <LoginScreen onLogin={info => setSession(info)} />;
 }
