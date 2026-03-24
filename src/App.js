@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './style.css';
+import LoopSimulation from './LoopSimulation';
 
 const KEYPAD = [
   ['1', '2', '3'],
@@ -114,6 +115,7 @@ function LoginScreen({ onGuestLogin, onPhoneLogin }) {
 
 function MainApp({ onLogout, userMode }) {
   const [activeTab, setActiveTab] = useState('home');
+  const TABS = ['home', 'activities', 'reports', 'simulate'];
 
   return (
     <div className="app-container">
@@ -172,6 +174,11 @@ function MainApp({ onLogout, userMode }) {
             <p>Monthly reports coming soon.</p>
           </div>
         )}
+        {activeTab === 'simulate' && (
+          <div className="tab-content tab-content--sim">
+            <LoopSimulation />
+          </div>
+        )}
       </main>
 
       <nav className="bottom-nav">
@@ -195,6 +202,13 @@ function MainApp({ onLogout, userMode }) {
         >
           <span>📊</span>
           <span>Reports</span>
+        </button>
+        <button
+          className={`nav-item ${activeTab === 'simulate' ? 'active' : ''}`}
+          onClick={() => setActiveTab('simulate')}
+        >
+          <span>⚛</span>
+          <span>Simulate</span>
         </button>
       </nav>
     </div>
